@@ -69,13 +69,13 @@ public:
 class Job {
 public:
   Job(ThreadPool *threadpool, 
-      JobState *state,
+      std::shared_ptr<JobState> state,
       FunctionPtr func, 
       FunctionPtr sequential = nullptr, 
       FunctionPtr continued = nullptr, 
       Job *parent = nullptr);
   
-  JobState *getState();
+  std::shared_ptr<JobState> getState();
   ThreadPool *getThreadPool();
 
   void addTask(Task* newTask, Task* parentTask);
@@ -96,7 +96,7 @@ protected:
   FunctionPtr m_nextFunc;
 
   Job *m_parent;
-  JobState *m_state;
+  std::shared_ptr<JobState> m_state;
   
   uint32_t m_priority;
   
@@ -136,9 +136,15 @@ protected:
   Job *getJob(FunctionPtr func);
   Task *getTaskForThread(std::thread::id tid);
 
-  Job *createJob(FunctionPtr func, FunctionPtr sequential, FunctionPtr continued, Job* parent = nullptr, JobState* state = nullptr);
+  Job *createJob(
+      FunctionPtr func,
+      FunctionPtr sequential,
+      FunctionPtr continued,
+      Job* parent = nullptr,
+      std::shared_ptr<JobState> state = std::shared_ptr<JobState>(nullptr)
+  );
+
   Task *createTask(int64_t indvar, void *args, Task *parent, Job *job);
-  JobState *createJobState();
 
   void makeReady();
   void dequeueTask();
@@ -152,7 +158,6 @@ protected:
   std::vector<std::thread> m_threads;
   std::vector<Task *> m_tasks;
   std::vector<Job *> m_jobs;
-  std::vector<JobState *> m_states;
   std::vector<void *> m_allocs;
 
   std::set<std::thread::id> m_threadIdSet;

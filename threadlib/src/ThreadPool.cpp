@@ -43,7 +43,7 @@ void Task::exec(){
 }
 
 Job::Job(ThreadPool *threadpool,  
-    JobState *state,
+    std::shared_ptr<JobState> state,
     FunctionPtr func,
     FunctionPtr sequential,
     FunctionPtr continued,
@@ -57,7 +57,7 @@ Job::Job(ThreadPool *threadpool,
   m_priority(s_counter++),
   m_future(m_taskFinished.get_future()){}
 
-JobState* Job::getState(){
+std::shared_ptr<JobState> Job::getState(){
   return m_state;
 }
 
@@ -222,11 +222,11 @@ Job *ThreadPool::createJob(
     FunctionPtr sequential, 
     FunctionPtr continued, 
     Job *parent,
-    JobState *state){
+    std::shared_ptr<JobState> state){
   assert((m_jobMap.find(func) == m_jobMap.end()) && "Job for function already exists!");
   
   //std::cout << "creating new job\n";
-  if(!state) state = createJobState();
+  if(!state) state = std::make_shared<JobState>(this);
   Job *job = new Job(this, state, func, sequential, continued, parent);
   m_jobMap[func] = job;
 
@@ -240,12 +240,6 @@ Task *ThreadPool::createTask(int64_t indvar, void *args, Task *parent, Job *job)
   Task *task = new Task(indvar, args, parent, job);
   m_tasks.push_back(task);
   return task;
-}
-
-JobState *ThreadPool::createJobState(){
-  JobState *state = new JobState(this);
-  m_states.push_back(state);
-  return state;
 }
 
 bool ThreadPool::isMainThread(std::thread::id tid){
@@ -327,11 +321,9 @@ void ThreadPool::clear(){
   m_threads.clear();
 
   for(Task *task : m_tasks) delete task;
-  for(JobState *state : m_states) delete state;
   for(Job *job : m_jobs) delete job;
 
   m_tasks.clear();
-  m_states.clear();
   m_jobs.clear();
 }
 
